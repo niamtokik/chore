@@ -17,18 +17,31 @@
  *
  */
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "chore.h"
 
-int main(int argc, char **argv) {
-  if (!strcmp(argv[0], "chore")) {
-    argv[0] = "chore";
-    printf("chore\n");
-  }
-  else {
-    argv[0] = "chored";
-    chored_main(argc, argv);
+int chored_check_dir(char *home, char *path) {
+  char local_home[255];
+  bzero(local_home, 255);
+  char local_path[255];
+  bzero(local_path, 255);
+  char full_path[510];
+  bzero(full_path, 510);
+  struct stat tmp = {};
+
+  strlcpy(local_home, home, 255);
+  strlcpy(local_path, path, 255);
+  strlcat(full_path, local_home, 510);
+  strlcat(full_path, local_path, 510);
+
+  if ((stat(full_path, &tmp)) == ENOENT) {
+    printf("debug: creates %s\n", full_path);
+    mkdir(full_path, S_IRWXU);
+    return 1;
   }
   return 0;
 }

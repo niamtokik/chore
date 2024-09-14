@@ -1,12 +1,21 @@
 # chore
 
+WARNING: This project is unstable and should not be used in
+production.
+
 A simple project to manage jobs in pure C. The idea is using screen or
 tmux all the time is not the solution but it is quite important to
 have a way to deal with long running jobs.
 
-`chore` acts as a daemon running with the current user. Every users
-can run one or many `chore` daemon, they are identified with their
-pid, stored by default in `${HOME}/.config/chore/chore.pid`.
+The reason of this software is really simple. When starting a long
+running job on systems with ansible, salt or chef, it's always
+complicated to follow its state. `cron` and `at` are not also giving
+the hability to know exactly what happened with this jobs, and using
+`systemd` or other application like this one is not portable when you
+are dealing with different operating systems.
+
+`chored` and `chore` want to offer a simple way to deal with this
+problem.
 
 ## Usage
 
@@ -26,6 +35,68 @@ Add a new job.
 chore -- ${command}
 ```
 
+### `chored` flags
+
+| version | state  | flag | value    | notes |
+|---------|--------|------|----------|-------|
+| 0.1.0   | stable | `-v` |          | print `chored` version
+| 0.1.0   | stable | `-h` |          | print `chored` help
+| -       | wip    | `-H` |          | return `chored` manpage
+| -       | wip    | `-n` | `str[n]` | set `chored` session name
+| -       | wip    | `-d` |          | set `chored` in debug mode
+| -       | wip    | `-f` |          | put `chored` in foreground
+| -       | wip    | `-p` | `str[p]` | set `chored` configuration path
+| -       | wip    | `-F` |          | force start `chored
+
+- `str[n]`: `^[0-9a-zA-Z_]{1,63}$`
+- `str[p]`: standard unix path
+
+### `chore` flags
+
+| version | state  | flag | value    | notes |
+|---------|--------|------|----------|-------|
+| 0.1.0   | wip    | `-v` |          | print `chore` version
+| 0.1.0   | wip    | `-h` |          | print `chore` help
+| -       | wip    | `-H` |          | return `chore` manpage
+| -       | wip    | `-d` |          | switch to debug mode
+| -       | wip    | `-j` | `str[j]` | set job name also called job id
+| -       | wip    | `-n` | `str[n]` | set `chored` session name
+| -       | wip    | `-e` | `str[e]` | reset environment variables and set variables
+| -       | wip    | `-l` |          | list current jobs
+| -       | wip    | `-s` |          | list job state (require `-j`)
+| -       | wip    | `-S` |          | list job statistics (require `-j`)
+| -       | wip    | `-D` | `str[D]` | set a date to execute
+| -       | wip    | `-t` |          | terminate a job with SIGTERM (require `-j`)
+| -       | wip    | `-i` | `str[i]` | send input from files or stdin to stdin's process (require `-j`)
+| -       | wip    | `-o` |          | redirect stdout's process to stdout (require `-j`)
+| -       | wip    | `-k` | `int[k]` | send a signal to job (require `-j`)
+| -       | wip    | `-T` | `int[T]` | set job timeout in seconds (no timeout by default)
+| -       | wip    | `-r` | `str[r]` | set a pattern to react. read line by line or truncate long buffer to 255 chars.
+| -       | wip    | `-R` | `str[R]` | set an action when a pattern is found (require `-r`)
+| -       | wip    | `-x` |          | restart automatically the job in case of failure
+| -       | wip    | `--` | `str[-]` | all characters after `--` until carriage retun are considered part of the command
+
+- `str[j]`: `^[0-9a-zA-Z_]{1,63}$`
+- `str[n]`: `^[0-9a-zA-Z_]{1,63}$`
+- `str[e]`: to be defined
+- `str[D]`: iso8601
+- `str[i]`: standard unix path or `-` (from stdin)
+- `str[k]`: `^[0-9]{1,2}$` (valid unix signal)
+- `str[T]`: `^[0-9]+$`
+- `str[r]`: regexp
+- `str[R]`: `^(none|log|nolog|reload|terminate|kill|restart|deps|state|stats)$`
+  - `none`: default behavior, do nothing
+  - `log`: start logging stdout and stderr to log file
+  - `nolog`: stop logging stdout and stderr to log file
+  - `reload`: send sighup signal
+  - `terminate`: send sigterm signal
+  - `kill`: send sigkill signal
+  - `restart`: terminate, wait and restart the job
+  - `deps`: execute job dependencies
+  - `state`: log job state in log file
+  - `stats`: log job statistics in log file
+- `str[-]`: `^[[:print]]+$`
+
 ## Build
 
 ```sh
@@ -38,7 +109,27 @@ make
 make test
 ```
 
+## Benchmark
+
+```sh
+make benchmark
+```
+
 ## FAQ
+
+### How to print help?
+
+```sh
+chored -h
+chore -h
+```
+
+### How to print the version?
+
+```sh
+chored -v
+chore -v
+```
 
 ### How to start `chored` daemon?
 
@@ -89,6 +180,27 @@ session=test
 job=test
 command=test
 chore -n ${session} -j ${job_name} -- ${command}
+```
+
+### How to add a new job with custom environment?
+
+state: todo
+
+To reset whole environment variables (except `HOME` and `PATH`).
+
+```sh
+job=test
+command=test
+chore -j ${job_name} -e '' -- ${command}
+```
+
+To reset whole environment and configure custom variables.
+
+```sh
+job=test
+command=test
+env="test=1 data=2 p=3"
+chore -j ${job_name} -e "${env}" -- ${command}
 ```
 
 ### How to list jobs?
@@ -291,13 +403,136 @@ privileged command with an unprivileged user, a new system user called
 
 state: todo
 
-`chore` is a POSIX projects using standard C89 instruction. It should
-work on those systems:
+`chore` is a POSIX projects using C99 standard for compatibility and
+portability with other systems. It should work on those OSes:
 
  - [ ] OpenBSD
  - [ ] Linux
  - [ ] FreeBSD
  - [ ] NetBSD
  - [ ] DragonFlyBSD
+ - [ ] MacOS
+ - [ ] Minix
+
+### Where can I download a release?
+
+state: todo
+
+One and only one static executable can be downloaded on Github release
+page. This application embeds `chored` and `chore` commands. It can be
+deployed by copying this file in `/usr/local/bin` and creating a
+symlink.
+
+```sh
+# download latest release
+curl ${release}/chored -o chored
+curl ${release}/chored.sha256 -o chored
+curl ${release}/chored.gpg -o chored
+
+# check if chored is valid using sha256, openssl,
+# sha256sum or gpg.
+
+# copy release in bin directory
+doas cp chored /usr/local/bin/chored
+doas chmod +x /usr/local/bin/chored
+doas ln -s /usr/local/bin/chored /usr/local/bin/chore
+```
+
+### How to have the documentation?
+
+state: todo
+
+Man pages are stored in the static executable and can be extracted
+using the following command:
+
+```sh
+chored -H
+chore -H
+```
+
+Man pages for `chored` and `chore` are also available from Github
+release page.
+
+```sh
+curl ${release}/chored.8 -o chored.8
+curl ${release}/chored.8 -o chored.8.sha256
+doas cp chored.8 /usr/local/man/man8
+
+curl ${release}/chore.8 -o chore.8
+curl ${release}/chore.8 -o chore.8.sha256
+doas cp chore.8 /usr/local/man/man8
+```
+
+### Can I use crontab format to define jobs?
+
+state: todo
+
+No. The format is quite similar thought and it will possible to make
+it compatible with
+[`crontab(5)`](https://man.openbsd.org/man5/crontab.5).
+
+```sh
+# here the format
+${year} ${month} ${day} ${hour} ${minute} ${second} ${flags} ${command}
+
+# start a job at this specific time
+2025 01 01 00 00 00 -j newyear -- echo happy new year!
+
+# start a job right now
+* * * * * * my command to execute
+
+# cron compatibility
+cron 0 0 * * * my command to execute
+```
+
+It will be necessary to define a config file as wel, probably in
+`${HOME}/.config/chore/choretab`. To reload it during execution:
+
+```sh
+pkill -HUP chored
+```
+
+In case of error, nothing is loaded, but chored will log the issue and
+keep the previous configuration.
+
+### Is there job limitation?
+
+state: todo
+
+Yes. During the design phase it was a requirement to avoid heap
+allocation (malloc) and use only the stack provided by the operating
+system.
+
+### What about the license?
+
+[ISC License](https://en.wikipedia.org/wiki/ISC_license), [OpenBSD
+model](https://en.wikipedia.org/wiki/ISC_license#OpenBSD_license). You
+can do whatever you want with this project, that's a gift.
+
+```
+Copyright (c) 2024 Mathieu Kerjouan
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+```
+
+see: https://www.tldrlegal.com/license/isc-license
+
+### Where can I found developer documentation?
+
+[DESIGN.md](./DESIGN.md) file contains all information regarding
+constraints and choices made. A FAQ section for developers is also
+available.
 
 ## References and References
+
+[OpenBSD cron(8)](https://github.com/openbsd/src/tree/master/usr.sbin/cron)

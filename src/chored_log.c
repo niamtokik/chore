@@ -16,19 +16,20 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  */
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
 #include "chore.h"
 
-int main(int argc, char **argv) {
-  if (!strcmp(argv[0], "chore")) {
-    argv[0] = "chore";
-    printf("chore\n");
-  }
-  else {
-    argv[0] = "chored";
-    chored_main(argc, argv);
-  }
+int chored_log_debug() {
+  return 0;
+}
+
+int chored_log_info() {
+  return 0;
+}
+
+int chored_log_warning() {
+  return 0;
+}
+
+int chored_log_error() {
   return 0;
 }
